@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Banking App - Login</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <h1>Banking Operations Management</h1>
+
+    <div class="card">
+        <div class="tabs">
+            <button id="loginTab" class="tab-btn active" onclick="showLogin()">Login</button>
+            <button id="registerTab" class="tab-btn" onclick="showRegister()">Register</button>
+        </div>
+
+        <form id="loginForm">
+            <label>Username</label>
+            <input type="text" id="loginUsername" required>
+            <label>Password</label>
+            <input type="password" id="loginPassword" required>
+            <button type="submit">Login</button>
+        </form>
+
+        <form id="registerForm" style="display:none;">
+            <label>Username</label>
+            <input type="text" id="registerUsername" required>
+            <label>Password</label>
+            <input type="password" id="registerPassword" required>
+            <button type="submit">Register</button>
+        </form>
+
+        <p id="message"></p>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8081/api/v1";
+
+    function showLogin() {
+        document.getElementById("loginForm").style.display = "block";
+        document.getElementById("registerForm").style.display = "none";
+        document.getElementById("loginTab").classList.add("active");
+        document.getElementById("registerTab").classList.remove("active");
+        document.getElementById("message").textContent = "";
+    }
+
+    function showRegister() {
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("registerForm").style.display = "block";
+        document.getElementById("registerTab").classList.add("active");
+        document.getElementById("loginTab").classList.remove("active");
+        document.getElementById("message").textContent = "";
+    }
+
+    document.getElementById("loginForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const username = document.getElementById("loginUsername").value;
+        const password = document.getElementById("loginPassword").value;
+        const messageEl = document.getElementById("message");
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.message || "Login failed");
+            }
+
+            const data = await res.json();
+            localStorage.setItem("jwtToken", data.token);
+            localStorage.setItem("username", username);
+            window.location.href = "index.html";
+        } catch (err) {
+            messageEl.textContent = err.message;
+            messageEl.style.color = "red";
+        }
+    });
+
+    document.getElementById("registerForm").addEventListener("submit", async function(e) {
+        e.preventDefault();
+        const username = document.getElementById("registerUsername").value;
+        const password = document.getElementById("registerPassword").value;
+        const messageEl = document.getElementById("message");
+
+        try {
+            const res = await fetch(`${API_BASE}/auth/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, password })
+            });
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.message || "Registration failed");
+            }
+
+            messageEl.style.color = "green";
+            messageEl.textContent = "Registered successfully! Please login.";
+            showLogin();
+        } catch (err) {
+            messageEl.textContent = err.message;
+            messageEl.style.color = "red";
+        }
+    });
+</script>
+</body>
+</html>

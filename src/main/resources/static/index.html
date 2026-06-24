@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Banking App - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="navbar">
+        <span class="brand">🏦 Banking Operations</span>
+        <div>
+            <a href="index.html">Dashboard</a>
+            <a href="create-account.html">New Account</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="history.html">History</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </div>
+
+    <h1>All Accounts</h1>
+
+    <div id="accountList" class="account-list">
+        <p style="text-align:center;color:#888;">Loading...</p>
+    </div>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8081/api/v1";
+    const token = localStorage.getItem("jwtToken");
+
+    if (!token) {
+        window.location.href = "login.html";
+    }
+
+    function logout() {
+        localStorage.removeItem("jwtToken");
+        localStorage.removeItem("username");
+        window.location.href = "login.html";
+    }
+
+    async function loadAccounts() {
+        const listEl = document.getElementById("accountList");
+        try {
+            const res = await fetch(`${API_BASE}/accounts`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                logout();
+                return;
+            }
+
+            const accounts = await res.json();
+
+            if (accounts.length === 0) {
+                listEl.innerHTML = `<p style="text-align:center;color:#888;">No accounts yet. <a href="create-account.html">Create one</a></p>`;
+                return;
+            }
+
+            listEl.innerHTML = accounts.map(acc => {
+                const isSavings = acc.interestRate !== undefined;
+                const badge = isSavings
+                    ? `<span class="badge savings">SAVINGS</span>`
+                    : `<span class="badge current">CURRENT</span>`;
+                const extra = isSavings
+                    ? `Interest Rate: ${acc.interestRate}%`
+                    : `Overdraft Limit: ₹${acc.overdraftLimit}`;
+
+                return `
+                <div class="account-card">
+                    <div class="info">
+                        <h3>${acc.holderName} ${badge}</h3>
+                        <p>A/C No: ${acc.accountNumber}</p>
+                        <p>${extra}</p>
+                    </div>
+                    <div class="balance">₹${acc.balance.toFixed(2)}</div>
+                </div>
+            `;
+            }).join("");
+        } catch (err) {
+            listEl.innerHTML = `<p style="text-align:center;color:red;">Failed to load accounts. Is the backend running?</p>`;
+        }
+    }
+
+    loadAccounts();
+</script>
+</body>
+</html>

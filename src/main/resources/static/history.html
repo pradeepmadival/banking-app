@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Banking App - Transaction History</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+    <div class="navbar">
+        <span class="brand">🏦 Banking Operations</span>
+        <div>
+            <a href="index.html">Dashboard</a>
+            <a href="create-account.html">New Account</a>
+            <a href="transaction.html">Transactions</a>
+            <a href="history.html">History</a>
+            <a href="#" onclick="logout()">Logout</a>
+        </div>
+    </div>
+
+    <h1>Transaction History</h1>
+
+    <div class="card" style="max-width:600px;">
+        <label>Account Number</label>
+        <input type="text" id="accNoInput" placeholder="e.g. ACCAD45EACE">
+        <button class="btn" onclick="loadHistory()">View History</button>
+    </div>
+
+    <br>
+
+    <table id="historyTable" style="display:none;">
+        <thead>
+        <tr>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Timestamp</th>
+            <th>Remarks</th>
+        </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+    </table>
+
+    <p id="message" style="text-align:center;margin-top:15px;"></p>
+</div>
+
+<script>
+    const API_BASE = "http://localhost:8081/api/v1";
+    const token = localStorage.getItem("jwtToken");
+
+    if (!token) {
+        window.location.href = "login.html";
+    }
+
+    function logout() {
+        localStorage.removeItem("jwtToken");
+        localStorage.removeItem("username");
+        window.location.href = "login.html";
+    }
+
+    async function loadHistory() {
+        const accNo = document.getElementById("accNoInput").value.trim();
+        const messageEl = document.getElementById("message");
+        const table = document.getElementById("historyTable");
+        const body = document.getElementById("historyBody");
+
+        if (!accNo) {
+            messageEl.style.color = "red";
+            messageEl.textContent = "Please enter an account number";
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API_BASE}/accounts/${accNo}/transactions`, {
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                logout();
+                return;
+            }
+
+            if (!res.ok) {
+                const errData = await res.json().catch(() => null);
+                throw new Error(errData?.message || "Failed to load history");
+            }
+
+            const transactions = await res.json();
+
+            if (transactions.length === 0) {
+                table.style.display = "none";
+                messageEl.style.color = "#888";
+                messageEl.textContent = "No transactions found for this account.";
+                return;
+            }
+
+            body.innerHTML = transactions.map(t => `
+            <tr>
+                <td class="type-${t.type.toLowerCase()}">${t.type.replace("_", " ")}</td>
+                <td>₹${t.amount.toFixed(2)}</td>
+                <td>${new Date(t.timestamp).toLocaleString()}</td>
+                <td>${t.remarks}</td>
+            </tr>
+        `).join("");
+
+            table.style.display = "table";
+            messageEl.textContent = "";
+        } catch (err) {
+            table.style.display = "none";
+            messageEl.style.color = "red";
+            messageEl.textContent = err.message;
+        }
+    }
+</script>
+</body>
+</html>
